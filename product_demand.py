@@ -11,78 +11,59 @@ from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
 
-def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({'success': False, 'error': 'No input file provided'}))
-        sys.exit(1)
-    
+def run(data):
     try:
-        # Read input data
-        with open(sys.argv[1], 'r') as f:
-            data = json.load(f)
-        
         if not data:
-            print(json.dumps({
+            return {
                 'success': False,
                 'error': 'No product sales data available'
-            }))
-            sys.exit(0)
-        
-        # Organize data by product
+            }
+
         product_data = defaultdict(lambda: {'dates': [], 'quantities': [], 'name': '', 'stock': 0})
-        
+
         for item in data:
             pid = item['product_id']
             product_data[pid]['name'] = item['product_name']
             product_data[pid]['stock'] = item['current_stock']
             product_data[pid]['dates'].append(datetime.strptime(item['date'], '%Y-%m-%d'))
             product_data[pid]['quantities'].append(item['quantity_sold'])
-        
+
         results = []
         high_priority = 0
         total_restock = 0
-        
+
         for pid, pdata in product_data.items():
             if len(pdata['dates']) < 3:
-                continue  # Need at least 3 data points
-            
-            # Sort by date
+                continue
+
             sorted_indices = np.argsort(pdata['dates'])
             dates = [pdata['dates'][i] for i in sorted_indices]
             quantities = np.array([pdata['quantities'][i] for i in sorted_indices])
-            
-            # Create day indices
+
             day_indices = np.array([(d - dates[0]).days for d in dates]).reshape(-1, 1)
-            
-            # Train Linear Regression model
+
             model = LinearRegression()
             model.fit(day_indices, quantities)
-            
-            # Predict next 7 days
+
             last_date = dates[-1]
             weekly_predictions = []
-            
+
             for i in range(1, 8):
                 forecast_date = last_date + timedelta(days=i)
                 forecast_day_index = np.array([[(forecast_date - dates[0]).days]])
                 pred = max(0, model.predict(forecast_day_index)[0])
                 weekly_predictions.append(pred)
-            
-            # Calculate metrics
+
             weekly_demand = int(round(sum(weekly_predictions)))
             daily_avg = round(np.mean(quantities), 1)
-            
-            # Calculate trend (slope interpretation)
+
             slope = float(model.coef_[0])
             avg_quantity = np.mean(quantities)
             trend_pct = round((slope / avg_quantity * 100) if avg_quantity > 0 else 0, 1)
-            
-            # Determine if restock needed (assume 7 days coverage)
+
             restock_needed = max(0, weekly_demand - int(pdata['stock']))
-            
-            # Priority calculation
             stock_to_demand_ratio = pdata['stock'] / weekly_demand if weekly_demand > 0 else 999
-            
+
             if stock_to_demand_ratio < 0.5:
                 priority = 'high'
                 high_priority += 1
@@ -90,9 +71,9 @@ def main():
                 priority = 'medium'
             else:
                 priority = 'low'
-            
+
             total_restock += restock_needed
-            
+
             results.append({
                 'product_id': pid,
                 'product_name': pdata['name'],
@@ -109,12 +90,11 @@ def main():
                     'data_points': len(dates)
                 }
             })
-        
-        # Sort by priority (high first) and then by restock needed
+
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         results.sort(key=lambda x: (priority_order[x['priority']], -x['recommended_restock']))
-        
-        result = {
+
+        return {
             'success': True,
             'products': results,
             'summary': {
@@ -124,9 +104,23 @@ def main():
             },
             'algorithm': 'Linear Regression'
         }
-        
+
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Error in product demand prediction: {str(e)}'
+        }
+
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({'success': False, 'error': 'No input file provided'}))
+        sys.exit(1)
+
+    try:
+        with open(sys.argv[1], 'r') as f:
+            data = json.load(f)
+        result = run(data)
         print(json.dumps(result))
-        
     except Exception as e:
         print(json.dumps({
             'success': False,
