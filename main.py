@@ -32,5 +32,7 @@ def anomaly_detection_route():
     return jsonify(result)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Railway sets this automatically
+    import os
+    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
