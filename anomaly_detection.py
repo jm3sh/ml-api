@@ -9,7 +9,7 @@ import sys
 import json
 import numpy as np
 from datetime import datetime
-from sklearn.linear_model importLinearRegression
+from sklearn.linear_model import LinearRegression
 
 def run(data):
     try:
@@ -122,3 +122,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
