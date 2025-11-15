@@ -1,4 +1,3 @@
-import os
 from flask import Flask, request, jsonify
 import customer_insights
 import sales_forecast
@@ -31,8 +30,11 @@ def anomaly_detection_route():
     result = anomaly_detection.run(data)
     return jsonify(result)
 
+@app.route('/', methods=['GET'])
+def home():
+    return "ML API is running!"
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-
