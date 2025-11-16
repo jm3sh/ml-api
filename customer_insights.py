@@ -1,13 +1,27 @@
-"""
-===== CUSTOMER INSIGHTS =====
-Usage: python customer_insights.py customer_orders.csv
-CSV should have columns: customer_id, order_time, order_amount
-"""
-
-import sys, json, numpy as np, pandas as pd
+from flask import Flask, request, jsonify
+import pandas as pd
+import numpy as np
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
+import os
+
+app = Flask(__name__)
+
+def load_csv_fallback():
+    try:
+        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
+        df = pd.read_csv(path)
+        df = df.rename(columns=str.strip)
+
+        # Simulate customer_id and order_time
+        df['customer_id'] = 1000 + df.index  # dummy IDs
+        df['order_time'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['order_amount'] = df['Quantity'] * 150  # assume ₱150 per dish
+
+        return df[['customer_id', 'order_time', 'order_amount']].to_dict(orient='records')
+    except Exception as e:
+        return []
 
 def run(data):
     try:
@@ -43,44 +57,65 @@ def run(data):
             y = np.array([c['total_spent'] for c in multi])
             model = LinearRegression().fit(X, y)
             pred = model.predict([[np.mean(X[:,0])+1, np.mean(X[:,1])+30]])[0]
-            clv = {'predicted_30day_value': round(pred,2), 'model_coefficients': {'orders_impact': round(model.coef_[0],2), 'days_impact': round(model.coef_[1],2)}}
+            clv = {
+                'predicted_30day_value': round(pred,2),
+                'model_coefficients': {
+                    'orders_impact': round(model.coef_[0],2),
+                    'days_impact': round(model.coef_[1],2)
+                }
+            }
         else:
-            clv = {'predicted_30day_value': round(avg_order_value * 1.2, 2), 'model_coefficients': None}
+            clv = {
+                'predicted_30day_value': round(avg_order_value * 1.2, 2),
+                'model_coefficients': None
+            }
 
-        peak_hours = sorted([{'hour': h, 'order_count': c, 'hour_label': f'{h:02d}:00 - {h:02d}:59'} for h,c in hourly_orders.items()], key=lambda x: x['order_count'], reverse=True)[:5]
-        peak_days = sorted([{'day': d, 'order_count': c} for d,c in daily_orders.items()], key=lambda x: x['order_count'], reverse=True)
+        peak_hours = sorted([
+            {'hour': h, 'order_count': c, 'hour_label': f'{h:02d}:00 - {h:02d}:59'}
+            for h,c in hourly_orders.items()
+        ], key=lambda x: x['order_count'], reverse=True)[:5]
+
+        peak_days = sorted([
+            {'day': d, 'order_count': c}
+            for d,c in daily_orders.items()
+        ], key=lambda x: x['order_count'], reverse=True)
 
         recs = []
-        if repeat_rate < 30: recs.append("Low repeat rate detected. Consider implementing a loyalty program.")
-        if peak_hours: recs.append(f"Peak ordering time is {peak_hours[0]['hour_label']}. Consider running promotions during this period.")
-        if avg_order_value < 300: recs.append("Average order value is low. Consider upselling or bundle offers.")
+        if repeat_rate < 30:
+            recs.append("Low repeat rate detected. Consider implementing a loyalty program.")
+        if peak_hours:
+            recs.append(f"Peak ordering time is {peak_hours[0]['hour_label']}. Consider running promotions during this period.")
+        if avg_order_value < 300:
+            recs.append("Average order value is low. Consider upselling or bundle offers.")
 
-        return {'success': True, 'insights': {'total_customers': total_customers, 'repeat_customers': repeat_customers, 'repeat_customer_rate': repeat_rate, 'avg_order_value': avg_order_value, 'peak_hours': peak_hours, 'peak_days': peak_days, 'customer_lifetime_value': clv}, 'recommendations': recs, 'algorithm': 'Linear Regression'}
+        return {
+            'success': True,
+            'insights': {
+                'total_customers': total_customers,
+                'repeat_customers': repeat_customers,
+                'repeat_customer_rate': repeat_rate,
+                'avg_order_value': avg_order_value,
+                'peak_hours': peak_hours,
+                'peak_days': peak_days,
+                'customer_lifetime_value': clv
+            },
+            'recommendations': recs,
+            'algorithm': 'Linear Regression'
+        }
+
     except Exception as e:
         return {'success': False, 'error': f'Error in customer insights: {str(e)}'}
 
-def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({'success': False, 'error': 'No input file provided'}))
-        sys.exit(1)
-    
+@app.route('/customer_insights', methods=['POST'])
+def customer_insights():
     try:
-        file_path = sys.argv[1]
-        
-        # Read CSV file
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-            data = df.to_dict('records')
-        else:
-            # Read JSON file (backward compatibility)
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-        
-        print(json.dumps(run(data)))
+        data = request.get_json()
+        if not data:
+            data = load_csv_fallback()
+        result = run(data)
+        return jsonify(result)
     except Exception as e:
-        print(json.dumps({'success': False, 'error': f'Error reading file: {str(e)}'}))
-        sys.exit(1)
+        return jsonify({'success': False, 'error': str(e)})
 
-if __name__ == '_main_':
-    main()
-
+if __name__ == '__main__':
+    app.run()
