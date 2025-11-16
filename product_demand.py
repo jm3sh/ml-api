@@ -1,12 +1,13 @@
-#!/usr/bin/env python3
 """
-Product Demand Forecasting using Linear Regression
-Predicts future product demand and recommends restocking
+===== PRODUCT DEMAND FORECASTING =====
+Usage: python product_demand.py product_sales.csv
+CSV should have columns: product_id, product_name, current_stock, date, quantity_sold
 """
 
 import sys
 import json
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
@@ -117,8 +118,17 @@ def main():
         sys.exit(1)
 
     try:
-        with open(sys.argv[1], 'r') as f:
-            data = json.load(f)
+        file_path = sys.argv[1]
+        
+        # Read CSV file
+        if file_path.endswith('.csv'):
+            df = pd.read_csv(file_path)
+            data = df.to_dict('records')
+        else:
+            # Read JSON file (backward compatibility)
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+        
         result = run(data)
         print(json.dumps(result))
     except Exception as e:
@@ -128,5 +138,5 @@ def main():
         }))
         sys.exit(1)
 
-if __name__ == '__main__':
+if __name__ == '_main_':
     main()
