@@ -1,13 +1,26 @@
-"""
-===== SALES FORECAST =====
-Usage: python sales_forecast.py sales_history.csv
-CSV should have columns: date, orders, revenue
-"""
-
-import sys, json, numpy as np, pandas as pd
+from flask import Flask, request, jsonify
+import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_absolute_error
+import os
+
+app = Flask(__name__)
+
+def load_csv_fallback():
+    try:
+        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
+        df = pd.read_csv(path)
+        df = df.rename(columns=str.strip)
+
+        df['date'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d')
+        df['orders'] = df['Quantity']
+        df['revenue'] = df['Quantity'] * 150  # assume ₱150 per dish
+
+        return df[['date', 'orders', 'revenue']].to_dict(orient='records')
+    except Exception as e:
+        return []
 
 def run(data):
     try:
@@ -35,7 +48,12 @@ def run(data):
         for i in range(1,8):
             fd = dates[-1] + timedelta(days=i)
             xi = np.array([[(fd - dates[0]).days]])
-            forecast.append({'date': fd.strftime('%Y-%m-%d'), 'day': fd.strftime('%A'), 'predicted_orders': max(0,int(round(om.predict(xi)[0]))), 'predicted_revenue': round(rm.predict(xi)[0],2)})
+            forecast.append({
+                'date': fd.strftime('%Y-%m-%d'),
+                'day': fd.strftime('%A'),
+                'predicted_orders': max(0,int(round(om.predict(xi)[0]))),
+                'predicted_revenue': round(rm.predict(xi)[0],2)
+            })
 
         total_orders = sum(f['predicted_orders'] for f in forecast)
         total_revenue = sum(f['predicted_revenue'] for f in forecast)
@@ -67,27 +85,16 @@ def run(data):
     except Exception as e:
         return {'success': False, 'error': f'Error in sales forecast: {str(e)}'}
 
-def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({'success': False, 'error': 'No input file provided'}))
-        sys.exit(1)
-    
+@app.route('/sales_forecast', methods=['POST'])
+def sales_forecast():
     try:
-        file_path = sys.argv[1]
-        
-        # Read CSV file
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-            data = df.to_dict('records')
-        else:
-            # Read JSON file (backward compatibility)
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-        
-        print(json.dumps(run(data)))
+        data = request.get_json()
+        if not data:
+            data = load_csv_fallback()
+        result = run(data)
+        return jsonify(result)
     except Exception as e:
-        print(json.dumps({'success': False, 'error': f'Error reading file: {str(e)}'}))
-        sys.exit(1)
+        return jsonify({'success': False, 'error': str(e)})
 
-if __name__ == '_main_':
-    main()
+if __name__ == '__main__':
+    app.run()
