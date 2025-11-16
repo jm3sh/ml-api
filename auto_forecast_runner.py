@@ -7,10 +7,10 @@ forecast_results = generate_forecast()
 
 # 🧠 Connect to Localhost MySQL
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",  # Leave blank if no password set in XAMPP
-    database="home_cooking_by_gee"
+    host="sql105.infinityfree.com",
+    user="if0_40224608",
+    password="jrmOGJYzoRJ",  # Leave blank if no password set in XAMPP
+    database="if0_40224608_home_cooking_gee"
 )
 
 cursor = conn.cursor()
@@ -32,5 +32,6 @@ for row in forecast_results:
 
 conn.commit()
 conn.close()
+
 
 print("✅ Forecast successfully saved to weekly_forecast table.")
