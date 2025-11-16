@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 """
-Customer Behavior Analysis using Linear Regression
-Analyzes customer spending patterns and predicts future behavior
+===== CUSTOMER INSIGHTS =====
+Usage: python customer_insights.py customer_orders.csv
+CSV should have columns: customer_id, order_time, order_amount
 """
 
-import sys, json, numpy as np
+import sys, json, numpy as np, pandas as pd
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
@@ -63,9 +63,23 @@ def main():
     if len(sys.argv) < 2:
         print(json.dumps({'success': False, 'error': 'No input file provided'}))
         sys.exit(1)
-    with open(sys.argv[1], 'r') as f:
-        data = json.load(f)
-    print(json.dumps(run(data)))
+    
+    try:
+        file_path = sys.argv[1]
+        
+        # Read CSV file
+        if file_path.endswith('.csv'):
+            df = pd.read_csv(file_path)
+            data = df.to_dict('records')
+        else:
+            # Read JSON file (backward compatibility)
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+        
+        print(json.dumps(run(data)))
+    except Exception as e:
+        print(json.dumps({'success': False, 'error': f'Error reading file: {str(e)}'}))
+        sys.exit(1)
 
-if __name__ == '__main__':
+if __name__ == '_main_':
     main()
