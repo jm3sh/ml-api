@@ -4,7 +4,6 @@ Anomaly Detection using Statistical Methods
 Linear Regression is used to establish baseline trends,
 then statistical deviation (Z-score) identifies anomalies
 """
-
 from flask import Flask, request, jsonify
 import pandas as pd
 import numpy as np
@@ -131,3 +130,4 @@ def anomaly_detection():
 
 if __name__ == '__main__':
     app.run()
+
