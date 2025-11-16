@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Anomaly Detection using Statistical Methods
-Linear Regression is used to establish baseline trends,
-then statistical deviation (Z-score) identifies anomalies
+===== ANOMALY DETECTION =====
+Usage: python anomaly_detection.py sales_data.csv
+CSV should have columns: date, orders, revenue
 """
 
 import sys
 import json
 import numpy as np
+import pandas as pd
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 
@@ -109,8 +110,18 @@ def main():
         sys.exit(1)
 
     try:
-        with open(sys.argv[1], 'r') as f:
-            data = json.load(f)
+        file_path = sys.argv[1]
+        
+        # Read CSV file
+        if file_path.endswith('.csv'):
+            df = pd.read_csv(file_path)
+            # Convert to list of dicts
+            data = df.to_dict('records')
+        else:
+            # Read JSON file (backward compatibility)
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+        
         result = run(data)
         print(json.dumps(result))
     except Exception as e:
@@ -120,6 +131,5 @@ def main():
         }))
         sys.exit(1)
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     main()
-
