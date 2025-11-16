@@ -1,16 +1,23 @@
-#!/usr/bin/env python3
-"""
-===== ANOMALY DETECTION =====
-Usage: python anomaly_detection.py sales_data.csv
-CSV should have columns: date, orders, revenue
-"""
-
-import sys
-import json
-import numpy as np
+from flask import Flask, request, jsonify
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
+import os
+
+app = Flask(__name__)
+
+def load_csv_fallback():
+    try:
+        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
+        df = pd.read_csv(path)
+        df = df.rename(columns=str.strip)  # Clean column names
+        df['date'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d')
+        df['orders'] = df['Quantity']
+        df['revenue'] = df['Quantity'] * 150  # Example: assume ₱150 per dish
+        return df[['date', 'orders', 'revenue']].to_dict(orient='records')
+    except Exception as e:
+        return []
 
 def run(data):
     try:
@@ -104,33 +111,18 @@ def run(data):
             'error': f'Error in anomaly detection: {str(e)}'
         }
 
-def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({'success': False, 'error': 'No input file provided'}))
-        sys.exit(1)
-
+@app.route('/anomaly_detection', methods=['POST'])
+def anomaly_detection():
     try:
-        file_path = sys.argv[1]
-        
-        # Read CSV file
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-            # Convert to list of dicts
-            data = df.to_dict('records')
-        else:
-            # Read JSON file (backward compatibility)
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-        
+        data = request.get_json()
+        if not data:
+            data = load_csv_fallback()
         result = run(data)
-        print(json.dumps(result))
+        return jsonify(result)
     except Exception as e:
-        print(json.dumps({
-            'success': False,
-            'error': f'Error in anomaly detection: {str(e)}'
-        }))
-        sys.exit(1)
+        return jsonify({'success': False, 'error': str(e)})
 
-if __name__ == '_main_':
-    main()
+if __name__ == '__main__':
 
+    
+    app.run()
