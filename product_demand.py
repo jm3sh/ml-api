@@ -1,24 +1,34 @@
-"""
-===== PRODUCT DEMAND FORECASTING =====
-Usage: python product_demand.py product_sales.csv
-CSV should have columns: product_id, product_name, current_stock, date, quantity_sold
-"""
-
-import sys
-import json
-import numpy as np
+from flask import Flask, request, jsonify
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
+import os
+
+app = Flask(__name__)
+
+def load_csv_fallback():
+    try:
+        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
+        df = pd.read_csv(path)
+        df = df.rename(columns=str.strip)
+
+        # Simulate product_id and stock
+        df['product_id'] = 1
+        df['product_name'] = df['DishName']
+        df['current_stock'] = 10  # dummy stock
+        df['date'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d')
+        df['quantity_sold'] = df['Quantity']
+
+        return df[['product_id', 'product_name', 'current_stock', 'date', 'quantity_sold']].to_dict(orient='records')
+    except Exception as e:
+        return []
 
 def run(data):
     try:
         if not data:
-            return {
-                'success': False,
-                'error': 'No product sales data available'
-            }
+            return {'success': False, 'error': 'No product sales data available'}
 
         product_data = defaultdict(lambda: {'dates': [], 'quantities': [], 'name': '', 'stock': 0})
 
@@ -40,7 +50,6 @@ def run(data):
             sorted_indices = np.argsort(pdata['dates'])
             dates = [pdata['dates'][i] for i in sorted_indices]
             quantities = np.array([pdata['quantities'][i] for i in sorted_indices])
-
             day_indices = np.array([(d - dates[0]).days for d in dates]).reshape(-1, 1)
 
             model = LinearRegression()
@@ -48,7 +57,6 @@ def run(data):
 
             last_date = dates[-1]
             weekly_predictions = []
-
             for i in range(1, 8):
                 forecast_date = last_date + timedelta(days=i)
                 forecast_day_index = np.array([[(forecast_date - dates[0]).days]])
@@ -57,7 +65,6 @@ def run(data):
 
             weekly_demand = int(round(sum(weekly_predictions)))
             daily_avg = round(np.mean(quantities), 1)
-
             slope = float(model.coef_[0])
             avg_quantity = np.mean(quantities)
             trend_pct = round((slope / avg_quantity * 100) if avg_quantity > 0 else 0, 1)
@@ -107,36 +114,18 @@ def run(data):
         }
 
     except Exception as e:
-        return {
-            'success': False,
-            'error': f'Error in product demand prediction: {str(e)}'
-        }
+        return {'success': False, 'error': f'Error in product demand prediction: {str(e)}'}
 
-def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({'success': False, 'error': 'No input file provided'}))
-        sys.exit(1)
-
+@app.route('/product_demand', methods=['POST'])
+def product_demand():
     try:
-        file_path = sys.argv[1]
-        
-        # Read CSV file
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-            data = df.to_dict('records')
-        else:
-            # Read JSON file (backward compatibility)
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-        
+        data = request.get_json()
+        if not data:
+            data = load_csv_fallback()
         result = run(data)
-        print(json.dumps(result))
+        return jsonify(result)
     except Exception as e:
-        print(json.dumps({
-            'success': False,
-            'error': f'Error in product demand prediction: {str(e)}'
-        }))
-        sys.exit(1)
+        return jsonify({'success': False, 'error': str(e)})
 
-if __name__ == '_main_':
-    main()
+if __name__ == '__main__':
+    app.run()
