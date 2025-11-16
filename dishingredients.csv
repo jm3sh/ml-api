@@ -1,0 +1,75 @@
+DishName,Ingredient,QuantityRequired
+Inihaw na Bangus,Bangus,1.00
+Seafood Fiesta in Bilao,Mixed Seafood,1.00
+Seafood Fiesta in Bilao,Seafood Sauce,0.25
+Beef Broccoli,Beef,1.00
+Beef Broccoli,Broccoli,0.50
+Beef Caldereta,Beef,1.00
+Beef Caldereta,Caldereta Sauce,0.25
+Beef Tapa,Beef,1.00
+Beef Tapa,Tapa Marinade,0.20
+Beef Steak,Beef,1.00
+Beef Steak,Soy Sauce,0.10
+Beef Steak,Onion,0.10
+Lechon Kawali,Pork Belly,1.00
+Lechon Kawali,Cooking Oil,0.20
+Pork Adobo,Pork,1.00
+Pork Adobo,Soy Sauce,0.05
+Pork Adobo,Vinegar,0.03
+Sisig,Pork,1.00
+Sisig,Sisig Seasoning,0.15
+Crispy Pata,Pork Leg,1.00
+Crispy Pata,Cooking Oil,0.30
+Pork BBQ,Pork,1.00
+Pork BBQ,BBQ Marinade,0.20
+Chopsuey,Mixed Vegetables,1.00
+Chopsuey,Soy Sauce,0.10
+Laing,Dried Taro Leaves,1.00
+Laing,Coconut Milk,0.30
+Pakbet,Mixed Vegetables,1.00
+Pakbet,Bagoong,0.10
+Buttered Mushroom,Mushroom,1.00
+Buttered Mushroom,Butter,0.15
+Puto Cheese,Rice Flour,1.00
+Puto Cheese,Cheese,0.15
+Puto Pao,Rice Flour,1.00
+Puto Pao,Asado Filling,0.20
+Kutsinta,Rice Flour,1.00
+Kutsinta,Brown Sugar,0.20
+Buchi,Glutinous Rice Flour,1.00
+Buchi,Red Bean Filling,0.20
+Tapsilog,Beef Tapa,1.00
+Tapsilog,Egg,0.20
+Tapsilog,Rice,0.50
+Chicksilog,Fried Chicken,1.00
+Chicksilog,Egg,0.20
+Chicksilog,Rice,0.50
+Longsilog,Longganisa,1.00
+Longsilog,Egg,0.20
+Longsilog,Rice,0.50
+Bangsilog,Bangus,1.00
+Bangsilog,Egg,0.20
+Bangsilog,Rice,0.50
+Sisigsilog,Sisig,1.00
+Sisigsilog,Egg,0.20
+Sisigsilog,Rice,0.50
+2 in 1 Combo Meal,Chicken Adobo,0.50
+2 in 1 Combo Meal,Fried Chicken,0.50
+3 in 1 Combo Meal,Chicken Adobo,0.33
+3 in 1 Combo Meal,Fried Chicken,0.33
+3 in 1 Combo Meal,Beef Caldereta,0.33
+4 in 1 Combo Meal,Chicken Adobo,0.25
+4 in 1 Combo Meal,Fried Chicken,0.25
+4 in 1 Combo Meal,Beef Caldereta,0.25
+4 in 1 Combo Meal,Chopsuey,0.25
+Coffee Jelly,Jelly,1.00
+Coffee Jelly,Coffee,0.20
+Brownies (Dozen),Flour,1.00
+Brownies (Dozen),Chocolate,0.25
+Cordon Bleu (Frozen),Chicken Breast,1.00
+Cordon Bleu (Frozen),Ham & Cheese Filling,0.30
+Siomai (Frozen),Pork,1.00
+Siomai (Frozen),Wrapper,0.10
+Baked Sushi,Rice,1.00
+Baked Sushi,Seafood Mix,0.50
+Baked Sushi,Cheese,0.15
