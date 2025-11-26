@@ -9,7 +9,7 @@ import os
 def generate_forecast():
     try:
         # Load CSVs safely
-        orders_path = os.path.join(os.getcwd(), 'order_data.csv')
+        orders_path = os.path.join(os.getcwd(), 'final23_order_data.csv')
         ingredients_path = os.path.join(os.getcwd(), 'dishingredients.csv')
 
         if not os.path.exists(orders_path) or not os.path.exists(ingredients_path):
@@ -119,3 +119,4 @@ def generate_forecast():
 
     except Exception as e:
         return {"success": False, "error": f"Error generating forecast: {str(e)}"}
+
