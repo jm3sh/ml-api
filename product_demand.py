@@ -1,35 +1,20 @@
-from flask import Flask, request, jsonify
-import pandas as pd
+#!/usr/bin/env python3
+"""
+Product Demand Forecasting using Linear Regression
+Predicts future product demand and recommends restocking
+"""
+
 import numpy as np
 from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from collections import defaultdict
-import os
-
-app = Flask(__name__)
-
-def load_csv_fallback():
-    try:
-        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
-        df = pd.read_csv(path)
-        df = df.rename(columns=str.strip)
-
-        # Simulate product_id and stock
-        df['product_id'] = 1
-        df['product_name'] = df['DishName']
-        df['current_stock'] = 10  # dummy stock
-        df['date'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d')
-        df['quantity_sold'] = df['Quantity']
-
-        return df[['product_id', 'product_name', 'current_stock', 'date', 'quantity_sold']].to_dict(orient='records')
-    except Exception as e:
-        return []
 
 def run(data):
     try:
         if not data:
             return {'success': False, 'error': 'No product sales data available'}
 
+        # Organize data by product
         product_data = defaultdict(lambda: {'dates': [], 'quantities': [], 'name': '', 'stock': 0})
 
         for item in data:
@@ -45,26 +30,34 @@ def run(data):
 
         for pid, pdata in product_data.items():
             if len(pdata['dates']) < 3:
-                continue
+                continue  # Need at least 3 data points
 
+            # Sort by date
             sorted_indices = np.argsort(pdata['dates'])
             dates = [pdata['dates'][i] for i in sorted_indices]
             quantities = np.array([pdata['quantities'][i] for i in sorted_indices])
+
+            # Create day indices
             day_indices = np.array([(d - dates[0]).days for d in dates]).reshape(-1, 1)
 
+            # Train Linear Regression model
             model = LinearRegression()
             model.fit(day_indices, quantities)
 
+            # Predict next 7 days
             last_date = dates[-1]
             weekly_predictions = []
+
             for i in range(1, 8):
                 forecast_date = last_date + timedelta(days=i)
                 forecast_day_index = np.array([[(forecast_date - dates[0]).days]])
                 pred = max(0, model.predict(forecast_day_index)[0])
                 weekly_predictions.append(pred)
 
+            # Calculate metrics
             weekly_demand = int(round(sum(weekly_predictions)))
             daily_avg = round(np.mean(quantities), 1)
+
             slope = float(model.coef_[0])
             avg_quantity = np.mean(quantities)
             trend_pct = round((slope / avg_quantity * 100) if avg_quantity > 0 else 0, 1)
@@ -99,6 +92,7 @@ def run(data):
                 }
             })
 
+        # Sort by priority and restock need
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         results.sort(key=lambda x: (priority_order[x['priority']], -x['recommended_restock']))
 
@@ -115,17 +109,3 @@ def run(data):
 
     except Exception as e:
         return {'success': False, 'error': f'Error in product demand prediction: {str(e)}'}
-
-@app.route('/product_demand', methods=['POST'])
-def product_demand():
-    try:
-        data = request.get_json()
-        if not data:
-            data = load_csv_fallback()
-        result = run(data)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-if __name__ == '__main__':
-    app.run()
