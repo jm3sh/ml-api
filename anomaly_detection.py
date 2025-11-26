@@ -1,48 +1,52 @@
-from flask import Flask, request, jsonify
-import pandas as pd
+#!/usr/bin/env python3
+"""
+Anomaly Detection API using Statistical Methods
+Linear Regression establishes baseline trends,
+then statistical deviation (Z-score) identifies anomalies
+"""
+
+import os
+import json
 import numpy as np
 from datetime import datetime
+from flask import Flask, request, jsonify
 from sklearn.linear_model import LinearRegression
-import os
 
 app = Flask(__name__)
 
-def load_csv_fallback():
+@app.route('/anomaly_detection', methods=['POST'])
+def anomaly_detection():
     try:
-        path = os.path.join(os.path.dirname(__file__), 'order_data.csv')
-        df = pd.read_csv(path)
-        df = df.rename(columns=str.strip)  # Clean column names
-        df['date'] = pd.to_datetime(df['OrderDate']).dt.strftime('%Y-%m-%d')
-        df['orders'] = df['Quantity']
-        df['revenue'] = df['Quantity'] * 150  # Example: assume ₱150 per dish
-        return df[['date', 'orders', 'revenue']].to_dict(orient='records')
-    except Exception as e:
-        return []
-
-def run(data):
-    try:
-        if len(data) < 14:
-            return {
+        data = request.json
+        if not data or len(data) < 14:
+            return jsonify({
                 'success': False,
                 'error': 'Insufficient data for anomaly detection (minimum 14 days required)'
-            }
+            })
 
+        # Parse data
         dates = [datetime.strptime(d['date'], '%Y-%m-%d') for d in data]
         orders = np.array([d['orders'] for d in data])
         revenue = np.array([d['revenue'] for d in data])
+
+        # Create day indices
         day_indices = np.array([(d - dates[0]).days for d in dates]).reshape(-1, 1)
 
+        # Fit linear regression
         order_model = LinearRegression()
         revenue_model = LinearRegression()
         order_model.fit(day_indices, orders)
         revenue_model.fit(day_indices, revenue)
 
+        # Predict expected values
         expected_orders = order_model.predict(day_indices)
         expected_revenue = revenue_model.predict(day_indices)
 
+        # Residuals
         order_residuals = orders - expected_orders
         revenue_residuals = revenue - expected_revenue
 
+        # Standard deviations
         order_std = np.std(order_residuals)
         revenue_std = np.std(revenue_residuals)
 
@@ -88,7 +92,7 @@ def run(data):
         severity_order = {'high': 0, 'medium': 1}
         anomalies.sort(key=lambda x: (severity_order[x['severity']], x['date']), reverse=True)
 
-        return {
+        result = {
             'success': True,
             'anomalies': anomalies,
             'summary': {
@@ -105,24 +109,14 @@ def run(data):
             }
         }
 
+        return jsonify(result)
+
     except Exception as e:
-        return {
+        return jsonify({
             'success': False,
             'error': f'Error in anomaly detection: {str(e)}'
-        }
-
-@app.route('/anomaly_detection', methods=['POST'])
-def anomaly_detection():
-    try:
-        data = request.get_json()
-        if not data:
-            data = load_csv_fallback()
-        result = run(data)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        })
 
 if __name__ == '__main__':
-
-    
-    app.run()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
