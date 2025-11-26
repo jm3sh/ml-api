@@ -6,38 +6,29 @@ from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 import os
 
-def generate_forecast(days_back=60, days_ahead=7):
+def generate_forecast():
     try:
-        # Ensure CSV files exist
-        orders_file = os.path.join(os.getcwd(), "final23_order_data.csv")
-        ingredients_file = os.path.join(os.getcwd(), "dishingredients.csv")
+        # Load CSVs safely
+        orders_path = os.path.join(os.getcwd(), 'order_data.csv')
+        ingredients_path = os.path.join(os.getcwd(), 'dishingredients.csv')
 
-        if not os.path.exists(orders_file) or not os.path.exists(ingredients_file):
+        if not os.path.exists(orders_path) or not os.path.exists(ingredients_path):
             return {
                 "success": False,
                 "error": "CSV files not found. Ensure final23_order_data.csv and dishingredients.csv are present."
             }
 
-        # Load CSVs
-        orders_df = pd.read_csv(orders_file)
-        ingredients_df = pd.read_csv(ingredients_file)
+        orders_df = pd.read_csv(orders_path)
+        ingredients_df = pd.read_csv(ingredients_path)
 
-        # Clean column names
         orders_df.columns = [str(col).strip() for col in orders_df.columns]
         ingredients_df.columns = [str(col).strip() for col in ingredients_df.columns]
 
-        # Convert OrderDate
         orders_df['OrderDate'] = pd.to_datetime(orders_df['OrderDate'])
-
-        # Add Year and filter to current year only
         orders_df['Year'] = orders_df['OrderDate'].dt.year
         current_year = datetime.now().year
         orders_df = orders_df[orders_df['Year'] == current_year]
-
-        # Recompute Week number
         orders_df['Week'] = orders_df['OrderDate'].dt.isocalendar().week
-
-        # Add seasonal features
         orders_df['Month'] = orders_df['OrderDate'].dt.month
         orders_df['DayOfWeek'] = orders_df['OrderDate'].dt.dayofweek
         orders_df['IsWeekend'] = orders_df['DayOfWeek'].isin([5, 6]).astype(int)
@@ -49,13 +40,11 @@ def generate_forecast(days_back=60, days_ahead=7):
         ])
         orders_df['IsHoliday'] = orders_df['OrderDate'].isin(holiday_dates).astype(int)
 
-        # Group by Week and Dish
         weekly_orders = orders_df.groupby(['Year','Week','DishName']).agg({
             'Quantity':'sum','Month':'max','IsWeekend':'max','IsHoliday':'max'
         }).reset_index()
         weekly_orders['TrendIndex'] = weekly_orders.groupby('DishName').cumcount()
 
-        # Forecast
         unique_dishes = weekly_orders['DishName'].unique()
         next_week_number = datetime.now().isocalendar().week
         next_month_number = datetime.now().month
@@ -96,11 +85,9 @@ def generate_forecast(days_back=60, days_ahead=7):
                 'MAE': round(mae,2) if mae is not None else None
             })
 
-        # Ingredient mapping
         forecast_df = pd.DataFrame(forecast_results)
         merged_df = pd.merge(forecast_df, ingredients_df, on='DishName', how='left')
 
-        # Add Unit column
         def assign_unit(ingredient):
             ingredient_lower = str(ingredient).lower()
             if any(word in ingredient_lower for word in ['beef','pork','chicken','bangus','fish','seafood','meat','tapa','leg']):
@@ -122,28 +109,13 @@ def generate_forecast(days_back=60, days_ahead=7):
 
         merged_df['Unit'] = merged_df['Ingredient'].apply(assign_unit)
         merged_df['TotalIngredientQty'] = merged_df['ForecastQty'] * merged_df['QuantityRequired']
-
         ingredient_totals = merged_df.groupby(['Ingredient','Unit'])['TotalIngredientQty'].sum().reset_index()
         ingredient_totals['TotalIngredientQty'] = ingredient_totals['TotalIngredientQty'].round(2)
 
         return {
-            "success": True,
             "dishes": forecast_results,
             "ingredients": ingredient_totals.to_dict(orient="records")
         }
 
     except Exception as e:
         return {"success": False, "error": f"Error generating forecast: {str(e)}"}
-
-if __name__ == "__main__":
-    results = generate_forecast()
-    if results.get("success"):
-        print("\n📋 Sample Dishes:")
-        for dish in results['dishes'][:5]:
-            print(f"   • {dish['DishName']}: {dish['ForecastQty']} units")
-
-        print("\n🥕 Sample Ingredients:")
-        for ing in results['ingredients'][:5]:
-            print(f"   • {ing['Ingredient']}: {ing['TotalIngredientQty']} {ing['Unit']}")
-    else:
-        print("❌", results.get("error"))
