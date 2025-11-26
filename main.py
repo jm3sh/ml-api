@@ -8,30 +8,57 @@ import full_forecast
 
 app = Flask(__name__)
 
+# ----------------------------
+# Customer Insights
+# ----------------------------
 @app.route('/customer_insights', methods=['POST'])
 def customer_insights_route():
-    data = request.get_json()
-    result = customer_insights.run(data)
-    return jsonify(result)
+    try:
+        data = request.get_json(force=True)
+        result = customer_insights.run(data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
+# ----------------------------
+# Sales Forecast
+# ----------------------------
 @app.route('/sales_forecast', methods=['POST'])
 def sales_forecast_route():
-    data = request.get_json()
-    result = sales_forecast.run(data)
-    return jsonify(result)
+    try:
+        data = request.get_json(force=True)
+        result = sales_forecast.run(data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
+# ----------------------------
+# Product Demand
+# ----------------------------
 @app.route('/product_demand', methods=['POST'])
 def product_demand_route():
-    data = request.get_json()
-    result = product_demand.run(data)
-    return jsonify(result)
+    try:
+        data = request.get_json(force=True)
+        result = product_demand.run(data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
+# ----------------------------
+# Anomaly Detection
+# ----------------------------
 @app.route('/anomaly_detection', methods=['POST'])
 def anomaly_detection_route():
-    data = request.get_json()
-    result = anomaly_detection.run(data)
-    return jsonify(result)
+    try:
+        data = request.get_json(force=True)
+        result = anomaly_detection.run(data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
+# ----------------------------
+# Full Forecast (still DB-based)
+# ----------------------------
 @app.route('/run_full_forecast', methods=['GET'])
 def run_full_forecast():
     try:
@@ -53,6 +80,9 @@ def run_full_forecast():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# ----------------------------
+# Health Check
+# ----------------------------
 @app.route('/', methods=['GET'])
 def home():
     return "ML API is running!"
